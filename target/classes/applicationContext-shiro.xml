@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+	
+	<!-- 用于解析权限字符串到Permission实例 -->
+    <bean id="urlPermissionResolver" class="gcu.shiro.UrlPermissionResolve"/>
+    <!--配置角色认证和授权realm-->
+     <!-- 配置进行授权和认证的 Realm，要新增一个java类来实现，下面会有，class=包名.类名，init-methood是初始化的方法 -->
+    <bean id="permissionRealm" class="gcu.shiro.PerRealm">
+       <!-- <property name="cachingEnabled" value="true"/>
+        <property name="authenticationCachingEnabled" value="true"/>
+        <property name="authenticationCacheName" value="shiro-authenticationCache"/>
+        <property name="authorizationCachingEnabled" value="true"/>
+        <property name="authorizationCacheName" value="shiro-authorizationCaching"/>-->
+    </bean>
+    <!-- 定义or角色过滤器 -->
+    <bean id="resourceFilter" class="gcu.shiro.ResourceCheckFilter">
+        <property name="errorUrl" value="/user/noAuthority"/>
+    </bean>
+    <!--定义info的加密算法-->
+    <bean id="hashMatch" class="org.apache.shiro.authc.credential.HashedCredentialsMatcher">
+        <property name="hashAlgorithmName" value="md5"/>
+    </bean>
+    <!-- 配置緩存管理器 -->
+    <bean id="ehCacheManager" class="org.apache.shiro.cache.ehcache.EhCacheManager">
+    	<!-- 指定 ehcache 的配置文件，下面会给到 -->
+        <property name="cacheManagerConfigFile" value="classpath:ehcache/shiro-ehcache.xml"/>
+    </bean>
+	<!-- 配置 Shiro 的 SecurityManager Bean. -->
+    <bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+        <property name="realm" ref="permissionRealm"/>
+        <property name="cacheManager" ref="ehCacheManager"/>
+        <property name="authorizer.permissionResolver" ref="urlPermissionResolver"/>
+    </bean>
+
+	<!-- 配置 ShiroFilter bean: 该 bean 的 id 必须和 web.xml 文件中配置的 shiro filter 的 name 一致  -->
+    <bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+    	<!-- 装配 securityManager -->
+        <property name="securityManager" ref="securityManager"/>
+        <!-- 配置登陆页面--> 
+        <property name="loginUrl" value="/login/index"/>
+        <!-- 登陆成功后的一面 -->
+        <property name="successUrl" value="/user/list"/>
+        <!-- 无权限页面-->
+        <property name="unauthorizedUrl" value="/user/noAuthority"/>
+        <!-- 具体配置需要拦截哪些 URL, 以及访问对应的 URL 时使用 Shiro 的什么 Filter 进行拦截.  -->
+        <property name="filterChainDefinitions">
+            <value>
+                /css/** = anon
+                /font/** = anon
+                /img/** = anon
+                /js/** = anon
+
+                /login/** = anon
+                /user/info = anon
+                /user/noAuthority = anon
+                /**= authc,resourceFilter
+
+            </value>
+        </property>
+    </bean>
+    <!-- 配置 Bean 后置处理器: 会自动的调用和 Spring 整合后各个组件的生命周期方法. -->
+    <bean id="lifecycleBeanPostProcessor" class="org.apache.shiro.spring.LifecycleBeanPostProcessor"/>
+</beans>
